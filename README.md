@@ -9,7 +9,7 @@
 
 **Projeto Acadêmico** desenvolvido para demonstrar aplicação de técnicas de Machine Learning e visualização de dados na análise criminal. Sistema web interativo que oferece insights através de dashboards e modelos preditivos.
 
-## ✨ Funcionalidades Principais
+## Funcionalidades Principais
 
 ### 📊 **Dashboard Interativo**
 - 6 abas especializadas de análise
@@ -58,7 +58,7 @@
 - **Hashlib** - Hash seguro
 - **Logging** - Auditoria
 
-## 🚀 Instalação
+## Instalação
 
 ### **Pré-requisitos**
 - Python 3.8 ou superior
@@ -89,38 +89,38 @@ streamlit run enhanced_app.py
 - **Login:** `admin`
 - **Senha:** `admin123`
 
-## 📋 Uso do Sistema
+## Uso do Sistema
 
 ### **6 Abas de Análise:**
 
-1. **🌎 Geográfica** - Mapas de calor, clusters, pontos individuais
-2. **🕒 Temporal** - Padrões por hora/dia/semana
-3. **👥 Clusters** - Agrupamentos de crimes similares
-4. **🚨 Anomalias** - Detecção de padrões atípicos
-5. **🔮 Previsão** - Modelos preditivos de risco
-6. **📊 Estatísticas** - KPIs e insights gerais
+1. **Geográfica** - Mapas de calor, clusters, pontos individuais
+2. **Temporal** - Padrões por hora/dia/semana
+3. **Clusters** - Agrupamentos de crimes similares
+4. **Anomalias** - Detecção de padrões atípicos
+5. **Previsão** - Modelos preditivos de risco
+6. **Estatísticas** - KPIs e insights gerais
 
 ### **Filtros Disponíveis:**
-- 📅 Período de análise
-- 🏘️ Bairros específicos
-- 🔫 Tipos de crime
-- 🕐 Faixa horária
-- 📅 Dias da semana
+-  Período de análise
+-  Bairros específicos
+-  Tipos de crime
+-  Faixa horária
+-  Dias da semana
 
 ## 📁 Estrutura do Projeto
 
 ```
 sistema-analise-criminal/
-├── enhanced_app.py          # 🎯 Dashboard principal
-├── dashboard_tabs.py        # 📊 Funções das abas
-├── advanced_analysis.py     # 🤖 Análise e ML
-├── security_utils.py        # 🔒 Segurança e LGPD
-├── setup.py                # ⚙️ Configuração inicial
-├── requirements.txt        # 📦 Dependências
-├── data/                   # 📁 Dataset
+├── enhanced_app.py          #  Dashboard principal
+├── dashboard_tabs.py        # Funções das abas
+├── advanced_analysis.py     # Análise e ML
+├── security_utils.py        # Segurança e LGPD
+├── setup.py                # Configuração inicial
+├── requirements.txt        # Dependências
+├── data/                   # Dataset
 │   └── dataset_ocorrencias_delegacia_5.csv
-├── .gitignore             # 🚫 Arquivos ignorados
-└── README.md              # 📖 Documentação
+├── .gitignore             #  Arquivos ignorados
+└── README.md              #  Documentação
 ```
 
 ## 🔒 Recursos de Segurança
