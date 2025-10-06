@@ -12,7 +12,7 @@
 ## Funcionalidades Principais
 
 ### 📊 **Dashboard Interativo**
-- 6 abas especializadas de análise
+- **10 abas especializadas** de análise
 - Filtros dinâmicos em tempo real
 - Interface responsiva e intuitiva
 
@@ -21,6 +21,12 @@
 - Clustering geográfico inteligente
 - Validação de coordenadas por bairro
 - Visualização 3D de densidade
+
+### 👮 **Análise Investigativa**
+- **Desempenho por delegacia** - Taxa de resolução
+- **Perfil dos suspeitos** - Idade, gênero, armas
+- **Índice de gravidade** - Priorização de casos
+- **Modus operandi** - Padrões criminais
 
 ### 🤖 **Machine Learning**
 - Detecção de anomalias (Isolation Forest)
@@ -91,14 +97,18 @@ streamlit run enhanced_app.py
 
 ## Uso do Sistema
 
-### **6 Abas de Análise:**
+### **10 Abas de Análise Especializadas:**
 
-1. **Geográfica** - Mapas de calor, clusters, pontos individuais
-2. **Temporal** - Padrões por hora/dia/semana
-3. **Clusters** - Agrupamentos de crimes similares
-4. **Anomalias** - Detecção de padrões atípicos
-5. **Previsão** - Modelos preditivos de risco
-6. **Estatísticas** - KPIs e insights gerais
+1. **🌎 Geográfica** - Mapas de calor, clusters, pontos individuais
+2. **🕒 Temporal** - Padrões por hora/dia/semana
+3. **👥 Clusters** - Agrupamentos de crimes similares
+4. **🚨 Anomalias** - Detecção de padrões atípicos
+5. **🔮 Previsão** - Modelos preditivos de risco
+6. **👮 Investigação** - Desempenho por delegacia
+7. **🔫 Perfil Suspeitos** - Análise demográfica
+8. **🧬 Gravidade** - Índice de priorização
+9. **📝 Modus Operandi** - Padrões criminais
+10. **📊 Estatísticas** - KPIs e insights gerais
 
 ### **Filtros Disponíveis:**
 -  Período de análise

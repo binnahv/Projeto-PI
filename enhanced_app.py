@@ -13,7 +13,9 @@ import os
 from security_utils import SecurityManager, LGPDCompliance, DataValidator, show_lgpd_notice, show_model_limitations
 from dashboard_tabs import (
     create_scatter_map, show_temporal_analysis, show_cluster_analysis,
-    show_anomaly_analysis, show_risk_prediction, show_statistics_insights
+    show_anomaly_analysis, show_risk_prediction, show_statistics_insights,
+    show_investigative_performance, show_suspect_profile, show_gravity_index,
+    show_modus_operandi_analysis
 )
 
 # Configuração da página
@@ -148,19 +150,21 @@ class EnhancedCriminalDashboard:
                 date_range = (today, today)
         
         # Filtro de tipo de crime
-        crime_types = ['Todos'] + sorted(df['tipo_crime'].unique().tolist())
+        crime_types = sorted(df['tipo_crime'].unique().tolist())
         selected_crimes = st.sidebar.multiselect(
             "🔫 Tipos de Crime",
-            options=crime_types[1:],  # Excluir 'Todos'
-            default=crime_types[1:3] if len(crime_types) > 3 else crime_types[1:]
+            options=crime_types,
+            default=[],  # Sem seleção padrão
+            help="Deixe vazio para incluir todos os tipos"
         )
         
         # Filtro de bairros
-        bairros = ['Todos'] + sorted(df['bairro'].unique().tolist())
+        bairros = sorted(df['bairro'].unique().tolist())
         selected_bairros = st.sidebar.multiselect(
             "🏘️ Bairros",
-            options=bairros[1:],
-            default=bairros[1:5] if len(bairros) > 5 else bairros[1:]
+            options=bairros,
+            default=[],  # Sem seleção padrão
+            help="Deixe vazio para incluir todos os bairros"
         )
         
         # Filtro de hora
@@ -168,8 +172,9 @@ class EnhancedCriminalDashboard:
             "🕐 Horário",
             min_value=0,
             max_value=23,
-            value=(0, 23),
-            format="%d:00"
+            value=(0, 23),  # Todo o dia por padrão
+            format="%d:00",
+            help="Selecione a faixa horária de interesse"
         )
         
         # Filtro de dia da semana
@@ -177,7 +182,8 @@ class EnhancedCriminalDashboard:
         selected_days = st.sidebar.multiselect(
             "📅 Dias da Semana",
             options=dias_semana,
-            default=dias_semana
+            default=[],  # Sem seleção padrão
+            help="Deixe vazio para incluir todos os dias"
         )
         
         # Opções de visualização
@@ -189,25 +195,69 @@ class EnhancedCriminalDashboard:
         st.sidebar.markdown("---")
         st.sidebar.markdown("### 📊 Qualidade dos Dados")
         
-        # Estatísticas de coordenadas
         total_records = len(df)
-        valid_coords = df.apply(
-            lambda row: DataValidator.validate_coordinates(row.get('latitude'), row.get('longitude')), 
-            axis=1
-        ).sum()
         
-        coord_quality = (valid_coords / total_records) * 100 if total_records > 0 else 0
+        # Análise detalhada de coordenadas
+        if 'latitude' in df.columns and 'longitude' in df.columns:
+            # Coordenadas nulas
+            coords_nulas = (df['latitude'].isna() | df['longitude'].isna()).sum()
+            
+            # Coordenadas fora do range do Recife (aproximadamente)
+            recife_lat_min, recife_lat_max = -8.2, -7.9
+            recife_lon_min, recife_lon_max = -35.1, -34.8
+            
+            coords_fora_recife = (
+                (df['latitude'] < recife_lat_min) | 
+                (df['latitude'] > recife_lat_max) |
+                (df['longitude'] < recife_lon_min) | 
+                (df['longitude'] > recife_lon_max)
+            ).sum()
+            
+            # Coordenadas válidas geograficamente
+            coords_validas = total_records - coords_nulas - coords_fora_recife
+            coord_quality = (coords_validas / total_records) * 100 if total_records > 0 else 0
+            
+            st.sidebar.metric(
+                "🗺️ Coordenadas Válidas", 
+                f"{coords_validas:,}/{total_records:,}",
+                f"{coord_quality:.1f}%"
+            )
+            
+            # Mostrar problemas específicos
+            if coords_nulas > 0:
+                st.sidebar.text(f"⚠️ Coordenadas nulas: {coords_nulas}")
+            if coords_fora_recife > 0:
+                st.sidebar.text(f"⚠️ Fora do Recife: {coords_fora_recife}")
+                
+            # Análise por bairro (validação específica)
+            if 'bairro' in df.columns:
+                coords_por_bairro = {}
+                for bairro in df['bairro'].unique():
+                    df_bairro = df[df['bairro'] == bairro]
+                    valid_coords = df_bairro.apply(
+                        lambda row: DataValidator.validate_coordinates_by_neighborhood(
+                            row.get('latitude'), row.get('longitude'), row.get('bairro')
+                        ), axis=1
+                    ).sum()
+                    percentual = (valid_coords / len(df_bairro)) * 100 if len(df_bairro) > 0 else 0
+                    if percentual < 80:  # Apenas bairros com problemas
+                        coords_por_bairro[bairro] = percentual
+                
+                if coords_por_bairro:
+                    st.sidebar.markdown("**⚠️ Bairros Problemáticos:**")
+                    for bairro, perc in list(coords_por_bairro.items())[:3]:
+                        st.sidebar.text(f"• {bairro}: {perc:.0f}%")
         
-        st.sidebar.metric(
-            "🗺️ Coordenadas Válidas", 
-            f"{valid_coords:,}/{total_records:,}",
-            f"{coord_quality:.1f}%"
-        )
-        
-        # Estatísticas de datas
+        # Análise de datas mais detalhada
         if 'data_ocorrencia' in df.columns:
             today = datetime.now().date()
-            valid_dates = (df['data_ocorrencia'].dt.date <= today).sum()
+            df_dates = pd.to_datetime(df['data_ocorrencia'], errors='coerce')
+            
+            # Datas válidas (não futuras e não nulas)
+            valid_dates = ((df_dates.dt.date <= today) & (df_dates.notna())).sum()
+            future_dates = (df_dates.dt.date > today).sum()
+            null_dates = df_dates.isna().sum()
+            
             date_quality = (valid_dates / total_records) * 100 if total_records > 0 else 0
             
             st.sidebar.metric(
@@ -215,6 +265,39 @@ class EnhancedCriminalDashboard:
                 f"{valid_dates:,}/{total_records:,}",
                 f"{date_quality:.1f}%"
             )
+            
+            # Mostrar problemas se existirem
+            if future_dates > 0:
+                st.sidebar.text(f"⚠️ Datas futuras: {future_dates}")
+            if null_dates > 0:
+                st.sidebar.text(f"⚠️ Datas nulas: {null_dates}")
+        
+        # Análise de campos obrigatórios
+        campos_obrigatorios = ['tipo_crime', 'bairro']
+        campos_problema = []
+        
+        for campo in campos_obrigatorios:
+            if campo in df.columns:
+                nulos = df[campo].isna().sum()
+                vazios = (df[campo] == '').sum() if df[campo].dtype == 'object' else 0
+                total_problema = nulos + vazios
+                
+                if total_problema > 0:
+                    percentual = (total_problema / total_records) * 100
+                    campos_problema.append(f"{campo}: {percentual:.1f}%")
+        
+        if campos_problema:
+            st.sidebar.markdown("**⚠️ Campos Incompletos:**")
+            for problema in campos_problema[:3]:
+                st.sidebar.text(f"• {problema}")
+        
+        # Resumo da qualidade geral
+        if coord_quality >= 90 and date_quality >= 90 and not campos_problema:
+            st.sidebar.success("✅ Qualidade Excelente")
+        elif coord_quality >= 70 and date_quality >= 70:
+            st.sidebar.warning("⚠️ Qualidade Boa")
+        else:
+            st.sidebar.error("❌ Qualidade Baixa")
         
         return {
             'date_range': date_range,
@@ -326,13 +409,17 @@ def main():
         return
     
     # Abas principais
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        "🌎 Visão Geográfica",
-        "🕒 Análise Temporal", 
-        "👥 Clusters de Ocorrências",
-        "🚨 Ocorrências Atípicas",
-        "🔮 Previsão de Risco",
-        "📊 Estatísticas e Insights"
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
+        "🌎 Geográfica",
+        "🕒 Temporal", 
+        "👥 Clusters",
+        "🚨 Anomalias",
+        "🔮 Previsão",
+        "👮 Investigação",
+        "🔫 Perfil Suspeitos",
+        "🧬 Gravidade",
+        "📝 Modus Operandi",
+        "📊 Estatísticas"
     ])
     
     # Implementar cada aba
@@ -352,6 +439,18 @@ def main():
         show_risk_prediction()
     
     with tab6:
+        show_investigative_performance(df_filtered)
+    
+    with tab7:
+        show_suspect_profile(df_filtered)
+    
+    with tab8:
+        show_gravity_index(df_filtered)
+    
+    with tab9:
+        show_modus_operandi_analysis(df_filtered)
+    
+    with tab10:
         show_statistics_insights(df_filtered)
     
     # Sidebar com informações LGPD

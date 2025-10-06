@@ -542,6 +542,403 @@ def show_risk_prediction():
         except Exception as e:
             st.warning("Não foi possível exibir a importância das variáveis.")
 
+def show_investigative_performance(df):
+    """Aba de desempenho investigativo"""
+    st.header("👮 Desempenho Investigativo - Polícia Civil")
+    
+    if 'status_investigacao' not in df.columns or 'orgao_responsavel' not in df.columns:
+        st.warning("Dados de investigação não disponíveis no dataset atual.")
+        return
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("📈 Taxa de Resolução por Delegacia")
+        
+        # Calcular taxa de resolução por delegacia
+        delegacia_stats = df.groupby('orgao_responsavel').agg({
+            'status_investigacao': ['count', lambda x: (x == 'Concluído').sum()]
+        }).round(2)
+        
+        delegacia_stats.columns = ['Total_Casos', 'Casos_Concluidos']
+        delegacia_stats['Taxa_Resolucao'] = (
+            delegacia_stats['Casos_Concluidos'] / delegacia_stats['Total_Casos'] * 100
+        ).round(1)
+        
+        # Gráfico de barras
+        fig_resolucao = px.bar(
+            delegacia_stats.reset_index(),
+            x='orgao_responsavel',
+            y='Taxa_Resolucao',
+            title="Taxa de Resolução por Delegacia (%)",
+            color='Taxa_Resolucao',
+            color_continuous_scale='RdYlGn'
+        )
+        fig_resolucao.update_xaxes(tickangle=45)
+        st.plotly_chart(fig_resolucao, use_container_width=True)
+    
+    with col2:
+        st.subheader("📊 Volume de Casos por Delegacia")
+        
+        # Volume de casos
+        volume_casos = df['orgao_responsavel'].value_counts()
+        
+        fig_volume = px.pie(
+            values=volume_casos.values,
+            names=volume_casos.index,
+            title="Distribuição de Casos por Delegacia"
+        )
+        st.plotly_chart(fig_volume, use_container_width=True)
+    
+    # Tabela resumo
+    st.subheader("📋 Resumo por Delegacia")
+    delegacia_stats['Taxa_Resolucao'] = delegacia_stats['Taxa_Resolucao'].astype(str) + '%'
+    st.dataframe(delegacia_stats, use_container_width=True)
+    
+    # Insights
+    st.subheader("💡 Insights Investigativos")
+    melhor_delegacia = delegacia_stats['Taxa_Resolucao'].str.rstrip('%').astype(float).idxmax()
+    pior_delegacia = delegacia_stats['Taxa_Resolucao'].str.rstrip('%').astype(float).idxmin()
+    
+    st.success(f"🏆 **Melhor Performance:** {melhor_delegacia}")
+    st.error(f"⚠️ **Necessita Atenção:** {pior_delegacia}")
+
+def show_suspect_profile(df):
+    """Aba de perfil dos suspeitos"""
+    st.header("🔫 Perfil dos Suspeitos - Análise Demográfica")
+    
+    required_cols = ['idade_suspeito', 'genero_suspeito', 'arma_utilizada', 'tipo_crime']
+    missing_cols = [col for col in required_cols if col not in df.columns]
+    
+    if missing_cols:
+        st.warning(f"Colunas não disponíveis: {', '.join(missing_cols)}")
+        st.info("Simulando dados para demonstração...")
+        
+        # Simular dados para demonstração
+        np.random.seed(42)
+        df_demo = df.copy()
+        df_demo['idade_suspeito'] = np.random.randint(16, 65, len(df))
+        df_demo['genero_suspeito'] = np.random.choice(['Masculino', 'Feminino'], len(df), p=[0.7, 0.3])
+        df_demo['arma_utilizada'] = np.random.choice(
+            ['Arma de Fogo', 'Arma Branca', 'Sem Arma', 'Outros'], 
+            len(df), p=[0.3, 0.2, 0.4, 0.1]
+        )
+        df = df_demo
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.subheader("👥 Distribuição por Gênero")
+        genero_dist = df['genero_suspeito'].value_counts()
+        
+        fig_genero = px.pie(
+            values=genero_dist.values,
+            names=genero_dist.index,
+            title="Suspeitos por Gênero",
+            color_discrete_sequence=['#FF6B6B', '#4ECDC4']
+        )
+        st.plotly_chart(fig_genero, use_container_width=True)
+    
+    with col2:
+        st.subheader("🎯 Faixa Etária")
+        
+        # Criar faixas etárias
+        df['faixa_etaria'] = pd.cut(
+            df['idade_suspeito'], 
+            bins=[0, 18, 25, 35, 50, 100],
+            labels=['<18', '18-25', '26-35', '36-50', '>50']
+        )
+        
+        idade_dist = df['faixa_etaria'].value_counts()
+        
+        fig_idade = px.bar(
+            x=idade_dist.index,
+            y=idade_dist.values,
+            title="Suspeitos por Faixa Etária",
+            color=idade_dist.values,
+            color_continuous_scale='viridis'
+        )
+        st.plotly_chart(fig_idade, use_container_width=True)
+    
+    with col3:
+        st.subheader("🔫 Armas Utilizadas")
+        arma_dist = df['arma_utilizada'].value_counts()
+        
+        fig_arma = px.bar(
+            x=arma_dist.values,
+            y=arma_dist.index,
+            orientation='h',
+            title="Tipos de Arma",
+            color=arma_dist.values,
+            color_continuous_scale='Reds'
+        )
+        st.plotly_chart(fig_arma, use_container_width=True)
+    
+    # Análise cruzada
+    st.subheader("🔍 Análise Cruzada: Crime vs Perfil")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Heatmap: Tipo de Crime vs Gênero
+        crime_genero = pd.crosstab(df['tipo_crime'], df['genero_suspeito'])
+        
+        fig_heatmap1 = px.imshow(
+            crime_genero.values,
+            x=crime_genero.columns,
+            y=crime_genero.index,
+            title="Crime vs Gênero",
+            color_continuous_scale='Blues'
+        )
+        st.plotly_chart(fig_heatmap1, use_container_width=True)
+    
+    with col2:
+        # Heatmap: Tipo de Crime vs Arma
+        crime_arma = pd.crosstab(df['tipo_crime'], df['arma_utilizada'])
+        
+        fig_heatmap2 = px.imshow(
+            crime_arma.values,
+            x=crime_arma.columns,
+            y=crime_arma.index,
+            title="Crime vs Arma Utilizada",
+            color_continuous_scale='Reds'
+        )
+        st.plotly_chart(fig_heatmap2, use_container_width=True)
+    
+    # Insights
+    st.subheader("💡 Insights do Perfil")
+    
+    genero_predominante = df['genero_suspeito'].mode()[0]
+    faixa_predominante = df['faixa_etaria'].mode()[0]
+    arma_predominante = df['arma_utilizada'].mode()[0]
+    
+    st.info(f"👤 **Perfil Típico:** {genero_predominante}, {faixa_predominante} anos, usando {arma_predominante}")
+    
+    # Estatísticas por tipo de crime
+    crime_stats = df.groupby('tipo_crime').agg({
+        'genero_suspeito': lambda x: x.mode()[0],
+        'faixa_etaria': lambda x: x.mode()[0],
+        'arma_utilizada': lambda x: x.mode()[0]
+    })
+    
+    st.subheader("📊 Perfil por Tipo de Crime")
+    st.dataframe(crime_stats, use_container_width=True)
+
+def show_gravity_index(df):
+    """Aba de índice de gravidade"""
+    st.header("🧬 Índice de Gravidade dos Casos")
+    
+    st.info("💡 **Metodologia:** Índice calculado com base em: tipo de crime, arma utilizada, número de vítimas e suspeitos")
+    
+    # Simular dados se necessário
+    if 'num_vitimas' not in df.columns:
+        np.random.seed(42)
+        df['num_vitimas'] = np.random.randint(1, 5, len(df))
+        df['num_suspeitos'] = np.random.randint(1, 4, len(df))
+        df['arma_utilizada'] = np.random.choice(
+            ['Arma de Fogo', 'Arma Branca', 'Sem Arma', 'Outros'], 
+            len(df), p=[0.3, 0.2, 0.4, 0.1]
+        )
+    
+    # Calcular índice de gravidade
+    def calcular_gravidade(row):
+        score = 0
+        
+        # Peso por tipo de crime
+        crime_weights = {
+            'Homicídio': 10, 'Latrocínio': 9, 'Sequestro': 8, 'Estupro': 8,
+            'Roubo': 6, 'Extorsão': 5, 'Furto': 3, 'Estelionato': 2, 'Ameaça': 2
+        }
+        score += crime_weights.get(row['tipo_crime'], 1)
+        
+        # Peso por arma
+        arma_weights = {
+            'Arma de Fogo': 5, 'Arma Branca': 3, 'Outros': 2, 'Sem Arma': 1
+        }
+        score += arma_weights.get(row['arma_utilizada'], 1)
+        
+        # Peso por número de vítimas e suspeitos
+        score += row['num_vitimas'] * 2
+        score += row['num_suspeitos'] * 1
+        
+        return score
+    
+    df['indice_gravidade'] = df.apply(calcular_gravidade, axis=1)
+    
+    # Classificar gravidade
+    df['nivel_gravidade'] = pd.cut(
+        df['indice_gravidade'],
+        bins=[0, 10, 20, 100],
+        labels=['Baixa', 'Média', 'Alta']
+    )
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("🟢 Baixa Gravidade", 
+                 len(df[df['nivel_gravidade'] == 'Baixa']),
+                 f"{len(df[df['nivel_gravidade'] == 'Baixa'])/len(df)*100:.1f}%")
+    
+    with col2:
+        st.metric("🟡 Média Gravidade", 
+                 len(df[df['nivel_gravidade'] == 'Média']),
+                 f"{len(df[df['nivel_gravidade'] == 'Média'])/len(df)*100:.1f}%")
+    
+    with col3:
+        st.metric("🔴 Alta Gravidade", 
+                 len(df[df['nivel_gravidade'] == 'Alta']),
+                 f"{len(df[df['nivel_gravidade'] == 'Alta'])/len(df)*100:.1f}%")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("📊 Distribuição de Gravidade")
+        
+        gravidade_dist = df['nivel_gravidade'].value_counts()
+        
+        fig_gravidade = px.pie(
+            values=gravidade_dist.values,
+            names=gravidade_dist.index,
+            title="Casos por Nível de Gravidade",
+            color_discrete_sequence=['#2ECC71', '#F39C12', '#E74C3C']
+        )
+        st.plotly_chart(fig_gravidade, use_container_width=True)
+    
+    with col2:
+        st.subheader("🗺️ Gravidade por Bairro")
+        
+        bairro_gravidade = df.groupby('bairro')['indice_gravidade'].mean().sort_values(ascending=False)
+        
+        fig_bairro = px.bar(
+            x=bairro_gravidade.values[:10],
+            y=bairro_gravidade.index[:10],
+            orientation='h',
+            title="Top 10 Bairros - Índice Médio de Gravidade",
+            color=bairro_gravidade.values[:10],
+            color_continuous_scale='Reds'
+        )
+        st.plotly_chart(fig_bairro, use_container_width=True)
+    
+    # Casos de alta gravidade
+    st.subheader("🚨 Casos de Alta Gravidade - Prioridade Investigativa")
+    
+    casos_alta = df[df['nivel_gravidade'] == 'Alta'].sort_values('indice_gravidade', ascending=False)
+    
+    if len(casos_alta) > 0:
+        st.dataframe(
+            casos_alta[['tipo_crime', 'bairro', 'arma_utilizada', 'num_vitimas', 'indice_gravidade']].head(10),
+            use_container_width=True
+        )
+    else:
+        st.info("Nenhum caso de alta gravidade encontrado nos filtros atuais.")
+
+def show_modus_operandi_analysis(df):
+    """Aba de análise de modus operandi"""
+    st.header("📝 Análise de Modus Operandi - Padrões Criminais")
+    
+    if 'descricao_modus_operandi' not in df.columns:
+        st.warning("Campo 'descricao_modus_operandi' não disponível no dataset.")
+        st.info("Simulando análise de padrões textuais...")
+        
+        # Simular descrições para demonstração
+        modus_exemplos = [
+            "Golpe telefônico fingindo ser do banco",
+            "Invasão de residência durante madrugada",
+            "Furto de veículo em estacionamento",
+            "Fraude online com cartão clonado",
+            "Roubo em via pública com arma",
+            "Estelionato por aplicativo falso",
+            "Sequestro relâmpago no trânsito"
+        ]
+        
+        np.random.seed(42)
+        df['descricao_modus_operandi'] = np.random.choice(modus_exemplos, len(df))
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("🔍 Padrões Mais Comuns")
+        
+        # Análise de frequência de padrões
+        modus_freq = df['descricao_modus_operandi'].value_counts()
+        
+        fig_modus = px.bar(
+            x=modus_freq.values,
+            y=modus_freq.index,
+            orientation='h',
+            title="Modus Operandi Mais Frequentes",
+            color=modus_freq.values,
+            color_continuous_scale='viridis'
+        )
+        st.plotly_chart(fig_modus, use_container_width=True)
+    
+    with col2:
+        st.subheader("📈 Evolução Temporal dos Padrões")
+        
+        if 'data_ocorrencia' in df.columns:
+            # Converter para datetime e extrair ano-mês como string
+            df['data_dt'] = pd.to_datetime(df['data_ocorrencia'])
+            df['mes_str'] = df['data_dt'].dt.strftime('%Y-%m')
+            
+            # Top 3 modus operandi
+            top_modus = modus_freq.head(3).index
+            
+            modus_temporal = df[df['descricao_modus_operandi'].isin(top_modus)].groupby(
+                ['mes_str', 'descricao_modus_operandi']
+            ).size().reset_index(name='count')
+            
+            # Ordenar por mês
+            modus_temporal = modus_temporal.sort_values('mes_str')
+            
+            fig_temporal = px.line(
+                modus_temporal,
+                x='mes_str',
+                y='count',
+                color='descricao_modus_operandi',
+                title="Evolução dos Principais Padrões"
+            )
+            fig_temporal.update_xaxes(tickangle=45)
+            st.plotly_chart(fig_temporal, use_container_width=True)
+        else:
+            st.info("Campo 'data_ocorrencia' não disponível para análise temporal.")
+    
+    # Análise por bairro
+    st.subheader("🗺️ Modus Operandi por Região")
+    
+    modus_bairro = pd.crosstab(df['bairro'], df['descricao_modus_operandi'])
+    
+    # Mostrar apenas top 5 bairros e top 5 modus operandi
+    top_bairros = df['bairro'].value_counts().head(5).index
+    top_modus_5 = modus_freq.head(5).index
+    
+    modus_bairro_filtered = modus_bairro.loc[top_bairros, top_modus_5]
+    
+    fig_heatmap = px.imshow(
+        modus_bairro_filtered.values,
+        x=modus_bairro_filtered.columns,
+        y=modus_bairro_filtered.index,
+        title="Modus Operandi vs Bairros (Top 5)",
+        color_continuous_scale='Blues'
+    )
+    fig_heatmap.update_xaxes(tickangle=45)
+    st.plotly_chart(fig_heatmap, use_container_width=True)
+    
+    # Insights e recomendações
+    st.subheader("💡 Insights e Recomendações")
+    
+    modus_predominante = modus_freq.index[0]
+    bairro_problema = df[df['descricao_modus_operandi'] == modus_predominante]['bairro'].mode()[0]
+    
+    insights = [
+        f"🎯 **Padrão Dominante:** {modus_predominante} ({modus_freq.iloc[0]} casos)",
+        f"🗺️ **Região Crítica:** {bairro_problema} concentra mais casos deste padrão",
+        f"📊 **Diversidade:** {len(modus_freq)} padrões diferentes identificados",
+        f"⚠️ **Recomendação:** Focar operações preventivas no padrão dominante"
+    ]
+    
+    for insight in insights:
+        st.info(insight)
+
 def show_statistics_insights(df):
     """Aba de estatísticas e insights"""
     st.header("📊 Estatísticas e Insights Gerais")
