@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Dados sensíveis (gerados pelo sistema)
+*.pkl
+*.key
+*.log
+users.pkl
+security.key
+analysis_results_secure.pkl
+risk_model_secure.pkl
+audit_log.log
+
+# Ambiente virtual
+.venv/
+venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Sistema
+.DS_Store
+Thumbs.db
