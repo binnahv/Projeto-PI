@@ -21,9 +21,14 @@ python setup.py
 python advanced_analysis.py
 ```
 
-### 4. Iniciar dashboard
+### 4. Iniciar dashboard principal
 ```bash
 streamlit run enhanced_app.py
+```
+
+### 5. Dashboard de Violência Doméstica
+```bash
+streamlit run dashboard_violencia_domestica.py
 ```
 
 ## 🌐 Acesso
