@@ -511,7 +511,7 @@ def show_efetividade_policial(df):
     """Análise da efetividade das investigações policiais"""
     st.subheader("Efetividade Policial - Indicadores de Performance")
     
-    # Verificar se as colunas necessárias existem
+    # Isso Verifica se as colunas "necessárias" existem
     if 'status_caso' not in df.columns:
         st.warning("⚠️ Análise de efetividade não disponível: coluna 'status_caso' não encontrada no dataset.")
         st.info("💡 Para análise completa, o dataset deve conter as colunas: 'status_caso', 'orgao_responsavel'")
@@ -528,7 +528,7 @@ def show_efetividade_policial(df):
         
         st.metric("Taxa de Resolução", f"{taxa_resolucao:.1f}%")
         
-        # Gráfico de status
+        # O gráfico de status
         fig_status = px.pie(
             values=status_counts.values,
             names=status_counts.index,
@@ -560,7 +560,7 @@ def show_efetividade_policial(df):
             )
             st.plotly_chart(fig_delegacia, use_container_width=True)
             
-            # Melhor e pior delegacia
+            # A melhor e pior delegacia
             if len(delegacia_stats) > 0:
                 melhor = delegacia_stats.index[0]
                 pior = delegacia_stats.index[-1]
